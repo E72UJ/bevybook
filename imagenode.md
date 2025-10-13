@@ -289,3 +289,226 @@ fn handle_button_hover(
         }
     }
 }
+
+
+## 测试留存
+``` rust
+use bevy::prelude::*;
+
+#[derive(Component)]
+struct TextboxBackground;
+
+#[derive(Component)]
+struct SidebarLayer;
+
+#[derive(Component)]
+struct CharacterImage;
+
+#[derive(Component)]
+struct SizeDisplay;
+
+#[derive(Component)]
+struct EntityDisplay;
+
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    // 添加摄像机
+    commands.spawn(Camera2d);
+    
+    // 创建textbox UI层（底层）
+    commands.spawn((
+        Node {
+            width: Val::Percent(100.0),   
+            height: Val::Percent(25.0),   
+            position_type: PositionType::Absolute,
+            left: Val::Px(0.0),
+            bottom: Val::Px(0.0),
+            ..default()
+        },
+        BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.9)),
+        ZIndex(1),
+        Name::new("TextboxUI"),
+        TextboxBackground,
+    )).with_children(|parent| {
+        // 添加textbox背景图片
+        parent.spawn((
+            ImageNode::new(asset_server.load("textbox.png")),
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                ..default()
+            },
+            Name::new("TextboxBackground"),
+        ));
+        
+        // 添加大小显示文本
+        parent.spawn((
+            Text::new("加载中..."),
+            TextFont {
+                font_size: 24.0,
+                ..default()
+            },
+            TextColor(Color::WHITE),
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(20.0),
+                top: Val::Px(20.0),
+                ..default()
+            },
+            Name::new("SizeDisplayText"),
+            SizeDisplay,
+        ));
+        
+        // 添加实体信息显示文本
+        parent.spawn((
+            Text::new("实体信息加载中..."),
+            TextFont {
+                font_size: 20.0,
+                ..default()
+            },
+            TextColor(Color::srgb(0.8, 1.0, 0.8)), // 淡绿色
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(20.0),
+                top: Val::Px(120.0),
+                ..default()
+            },
+            Name::new("EntityDisplayText"),
+            EntityDisplay,
+        ));
+    });
+
+    // 创建sidebar层（上层）- 容纳角色图片
+    commands.spawn((
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            position_type: PositionType::Absolute,
+            left: Val::Px(0.0),
+            top: Val::Px(20.0),
+            padding: UiRect::all(Val::Px(50.0)),
+            ..default()
+        },
+        ZIndex(10),
+        Name::new("SidebarLayer"),
+        SidebarLayer,
+    )).with_children(|parent| {
+        // 添加你的机械天使角色图片
+        parent.spawn((
+            ImageNode::new(asset_server.load("sidebar.png")),
+            Node {
+                width: Val::Px(350.0),  
+                height: Val::Px(450.0), 
+                ..default()
+            },
+            Name::new("MechanicalAngel"),
+            CharacterImage,
+        ));
+    });
+}
+
+fn update_size_display(
+    mut text_query: Query<&mut Text, With<SizeDisplay>>,
+    windows: Query<&Window>,
+) {
+    if let Ok(window) = windows.single() {
+        if let Ok(mut text) = text_query.single_mut() {
+            let textbox_width = window.width();
+            let textbox_height = window.height() * 0.25;
+            
+            text.0 = format!(
+                "窗口: {:.0}x{:.0}px\nTextbox: {:.0}x{:.0}px (25%高度)\n角色图片: 350x450px (右下角)", 
+                window.width(), window.height(),
+                textbox_width, textbox_height
+            );
+        }
+    }
+}
+
+fn update_entity_display(
+    mut entity_text_query: Query<&mut Text, With<EntityDisplay>>,
+    all_entities: Query<(Entity, &Name)>,
+    character_query: Query<&Node, With<CharacterImage>>,
+) {
+    if let Ok(mut text) = entity_text_query.single_mut() {
+        let total_entities = all_entities.iter().count();
+        
+        // 获取角色图片的当前状态
+        let character_status = if let Ok(node) = character_query.single() {
+            match node.display {
+                Display::None => "隐藏",
+                _ => "显示",
+            }
+        } else {
+            "未找到"
+        };
+        
+        // 获取一些有趣的实体名称
+        let mut entity_names = Vec::new();
+        for (entity, name) in all_entities.iter().take(5) {
+            entity_names.push(format!("{}: {}", entity.index(), name.as_str()));
+        }
+        
+        text.0 = format!(
+            "总实体数: {}\n机械天使: {}\n实体示例:\n{}", 
+            total_entities,
+            character_status,
+            entity_names.join("\n")
+        );
+    }
+}
+
+fn on_window_resize(
+    mut resize_events: EventReader<bevy::window::WindowResized>,
+) {
+    for event in resize_events.read() {
+        let textbox_height = event.height * 0.25;
+        
+        println!("窗口改变: {:.0}x{:.0}px -> Textbox: {:.0}x{:.0}px", 
+            event.width, event.height, event.width, textbox_height);
+    }
+}
+
+fn character_interaction(
+    mut character_query: Query<&mut Node, With<CharacterImage>>,
+    input: Res<ButtonInput<KeyCode>>,
+) {
+    if input.just_pressed(KeyCode::Space) {
+        if let Ok(mut node) = character_query.single_mut() {
+            if node.width == Val::Px(350.0) {
+                node.width = Val::Px(450.0);
+                node.height = Val::Px(550.0);
+                println!("机械天使放大！");
+            } else {
+                node.width = Val::Px(350.0);
+                node.height = Val::Px(450.0);
+                println!("机械天使缩小");
+            }
+        }
+    }
+    
+    if input.just_pressed(KeyCode::KeyH) {
+        if let Ok(mut node) = character_query.single_mut() {
+            if node.display == Display::Flex {
+                node.display = Display::None;
+                println!("隐藏角色");
+            } else {
+                node.display = Display::Flex;
+                println!("显示角色");
+            }
+        }
+    }
+}
+
+fn main() {
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_systems(Startup, setup)
+        .add_systems(Update, (
+            update_size_display,
+            update_entity_display,
+            on_window_resize,
+            character_interaction,
+        ))
+        .run();
+}
+```
