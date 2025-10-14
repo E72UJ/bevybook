@@ -52,6 +52,7 @@ pub extern "C" fn free_string(ptr: *mut c_char) {
 ```
 
 ## Explanation
+```
 [package]
 name = "cppdll"
 version = "0.1.0"
@@ -66,3 +67,4 @@ libc = "0.2"
 
 [build-dependencies]
 cbindgen = "0.26"  
+```
