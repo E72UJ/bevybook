@@ -15,3 +15,5 @@ public partial class playbox : Node2D
 	}
 }
 ```
+
+## 注意，默认的生成头部分需要手动修改成node2d，否则无法运行。
