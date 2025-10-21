@@ -3,7 +3,6 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
-    <RootNamespace>GodotSwf测试项目</RootNamespace>
 	  <EnableDynamicLoading>true</EnableDynamicLoading>
 	  <PublishAot>true</PublishAot>
   </PropertyGroup>
